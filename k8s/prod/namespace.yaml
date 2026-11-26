@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cleo
+  labels:
+    kinasis.dev/environment: production
+    kinasis.dev/mongodb-access: "true"

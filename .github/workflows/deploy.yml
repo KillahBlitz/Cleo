@@ -1,0 +1,134 @@
+name: Cleo CI/CD
+
+on:
+  push:
+    branches: [devel, main]
+  pull_request:
+    branches: [devel, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cleo-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Validar aplicación
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      mongodb:
+        image: mongo:8.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping:1})'"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+        env:
+          NITRO_PRESET: node-server
+          NUXT_TELEMETRY_DISABLED: "1"
+      - name: Probar contra MongoDB temporal
+        run: node scripts/check-catalog.mjs && node scripts/check-deployment.mjs
+        env:
+          MONGODB_URI: mongodb://127.0.0.1:27017
+      - uses: azure/setup-kubectl@bda439f5f36b99b262ebdcd3613869bddb064c8e # v5.2.0
+        with:
+          version: v1.37.2
+      - name: Comprobar manifiestos y scripts
+        run: |
+          kubectl kustomize k8s/devel > /dev/null
+          kubectl kustomize k8s/prod > /dev/null
+          bash -n scripts/deploy-k8s.sh
+          python3 -m py_compile scripts/bootstrap-k8s.py
+
+  image:
+    name: Publicar imagen
+    needs: verify
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/main')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.name.outputs.image }}@${{ steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Nombre de imagen
+        id: name
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: echo "image=ghcr.io/${REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        id: build
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.name.outputs.image }}:${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Comprobar contenedor sin privilegios
+        env:
+          IMAGE: ${{ steps.name.outputs.image }}@${{ steps.build.outputs.digest }}
+        run: |
+          docker run --detach --name cleo-smoke --read-only --tmpfs /tmp --cap-drop ALL \
+            --security-opt no-new-privileges -p 127.0.0.1:3000:3000 "$IMAGE"
+          trap 'docker rm -f cleo-smoke > /dev/null' EXIT
+          curl --fail --retry 20 --retry-connrefused --retry-delay 1 http://127.0.0.1:3000/api/health/live
+          status=$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:3000/api/health/ready)
+          test "$status" = 503
+
+  deploy:
+    name: Desplegar en K3s
+    needs: image
+    runs-on: [self-hosted, linux, x64, kinasis-deploy]
+    timeout-minutes: 20
+    # Serialize push and manual deployments to the same environment.
+    concurrency:
+      group: cleo-deploy-${{ github.ref_name }}
+      cancel-in-progress: false
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'cleo' || 'cleo-dev' }}
+      url: ${{ github.ref == 'refs/heads/main' && 'https://cleo.kinasisdev.com' || 'https://cleo-dev.kinasisdev.com' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: azure/setup-kubectl@bda439f5f36b99b262ebdcd3613869bddb064c8e # v5.2.0
+        with:
+          version: v1.37.2
+      - name: Aplicar y comprobar despliegue
+        run: bash scripts/deploy-k8s.sh
+        env:
+          DEPLOY_NAMESPACE: ${{ github.ref == 'refs/heads/main' && 'cleo' || 'cleo-dev' }}
+          IMAGE: ${{ needs.image.outputs.image }}
+          RELEASE_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          NUXT_SESSION_PASSWORD: ${{ secrets.NUXT_SESSION_PASSWORD }}
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}

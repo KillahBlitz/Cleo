@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  namespace: cleo-dev
+  name: cleo-ingress
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: cleo
+  policyTypes: [Ingress]
+  ingress:
+    # Only cloudflared in this namespace may supply trusted proxy headers.
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: cleo-tunnel
+      ports:
+        - protocol: TCP
+          port: 3000

@@ -1,0 +1,65 @@
+# Administrator applies this once per namespace, after creating cleo-tunnel.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: cleo
+  name: cleo-tunnel
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cleo-tunnel
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cleo-tunnel
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: cloudflared
+          image: cloudflare/cloudflared:2026.11.2
+          args:
+            - tunnel
+            - --no-autoupdate
+            - --protocol
+            - http2
+            - --metrics
+            - 0.0.0.0:2000
+            - run
+            - --token-file
+            - /etc/cloudflared/token
+          ports:
+            - name: metrics
+              containerPort: 2000
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests: { cpu: 25m, memory: 64Mi }
+            limits: { cpu: 250m, memory: 256Mi }
+          livenessProbe:
+            tcpSocket: { port: metrics }
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          readinessProbe:
+            httpGet: { path: /ready, port: metrics }
+            periodSeconds: 10
+          volumeMounts:
+            - name: token
+              mountPath: /etc/cloudflared
+              readOnly: true
+      volumes:
+        - name: token
+          secret:
+            secretName: cleo-tunnel
+            defaultMode: 0440

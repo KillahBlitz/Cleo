@@ -2,6 +2,12 @@
 
 Sistema de subastas con Nuxt 4, Vue 3 y MongoDB. Acceso privado de administrador y panel de consulta con resumen, artículos y subastas.
 
+## Despliegue en K3s
+
+La [guía de despliegue](docs/DEPLOYMENT.md) explica la preparación y el uso de GitHub Actions: `devel` → namespace `cleo-dev` → `cleo-dev.kinasisdev.com`; `main` → namespace `cleo` → `cleo.kinasisdev.com`. Incluye los dos clústeres existentes, Cloudflare Tunnel, secretos por entorno, MongoDB, el runner en kinasis-eye y rollback. Docker publica únicamente el servidor compilado; `.env` queda fuera de la imagen.
+
+Los manifiestos están separados en dos carpetas independientes: `k8s/devel` para preproducción y `k8s/prod` para producción. Cada carpeta contiene la aplicación, su configuración, namespace, permisos y túnel.
+
 ## Calendario de entregas
 
 - **Panel → Entregas** (`/panel/entregas`): calendario mensual y agenda por día. Selecciona un turno libre o **Nueva cita** para registrar persona, día, hora, lugar y notas opcionales. Abre una cita con el icono de edición para reprogramarla, corregir datos o eliminarla con confirmación.
@@ -31,6 +37,8 @@ Abre http://localhost:3000/login. El login consulta la colección `admin` de Mon
 - `NUXT_SESSION_PASSWORD`: secreto aleatorio de al menos 32 caracteres.
 - `MONGODB_URI` (o `NUXT_MONGODB_URI`): cadena de conexión MongoDB.
 - `NUXT_MONGODB_DATABASE`: `cleo_db`.
+- `NUXT_APP_ORIGIN`: origen público HTTPS en Kubernetes; vacío usa el origen de la petición durante desarrollo.
+- `NUXT_TRUST_CLOUDFLARE`: `true` solo detrás del túnel con la NetworkPolicy suministrada; permite limitar el login por `CF-Connecting-IP`. Predeterminado `false`.
 
 `server/utils/mongodb.ts` reutiliza la conexión a `cleo_db`. El login necesita MongoDB disponible y consulta `admin`; las sesiones identifican al administrador por `_id` y verifican que aún exista. No hay registro público de administradores.
 

@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: cleo
+resources:
+  - deployment.yaml
+  - service.yaml
+  - network-policy.yaml
+configMapGenerator:
+  - name: cleo-config
+    literals:
+      - NODE_ENV=production
+      - NITRO_HOST=0.0.0.0
+      - NITRO_PORT=3000
+      - NUXT_MONGODB_DATABASE=cleo_db
+      - NUXT_APP_ORIGIN=https://cleo.kinasisdev.com
+      - NUXT_TRUST_CLOUDFLARE=true

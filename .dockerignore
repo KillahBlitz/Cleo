@@ -1,0 +1,17 @@
+.git
+.github
+.env
+.env.*
+node_modules
+.nuxt
+.output
+.DS_Store
+.deployment
+coverage
+docs
+k8s
+scripts
+*.log
+*.kubeconfig
+AGENTS.md
+README.md
