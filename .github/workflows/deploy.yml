@@ -103,12 +103,36 @@ jobs:
         env:
           IMAGE: ${{ steps.name.outputs.image }}@${{ steps.build.outputs.digest }}
         run: |
-          docker run --detach --name cleo-smoke --read-only --tmpfs /tmp --cap-drop ALL \
-            --security-opt no-new-privileges -p 127.0.0.1:3000:3000 "$IMAGE"
-          trap 'docker rm -f cleo-smoke > /dev/null' EXIT
-          curl --fail --retry 20 --retry-connrefused --retry-delay 1 http://127.0.0.1:3000/api/health/live
-          status=$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:3000/api/health/ready)
-          test "$status" = 503
+          cleanup() {
+            result=$?
+            if [ "$result" -ne 0 ]; then
+              docker logs --tail 100 cleo-smoke || true
+            fi
+            docker rm -f cleo-smoke > /dev/null || true
+            exit "$result"
+          }
+          trap cleanup EXIT
+
+          docker run --detach --name cleo-smoke \
+            --read-only --tmpfs /tmp --cap-drop ALL \
+            --security-opt no-new-privileges \
+            -p 127.0.0.1:3000:3000 "$IMAGE"
+
+          curl --fail --silent --show-error \
+            --retry 30 --retry-all-errors --retry-delay 1 \
+            --retry-max-time 60 --connect-timeout 2 --max-time 5 \
+            --output /dev/null \
+            http://127.0.0.1:3000/api/health/live
+
+          status=$(curl --silent --show-error \
+            --connect-timeout 2 --max-time 5 \
+            --output /dev/null --write-out '%{http_code}' \
+            http://127.0.0.1:3000/api/health/ready)
+
+          if [ "$status" != "503" ]; then
+            echo "Respuesta inesperada de readiness: $status; se esperaba 503."
+            exit 1
+          fi
 
   deploy:
     name: Desplegar en K3s
