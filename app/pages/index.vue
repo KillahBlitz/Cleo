@@ -1,0 +1,17 @@
+<script setup lang="ts">
+import type { StoreCatalog } from '~~/shared/types/store'
+import type { CommerceMode } from '~~/shared/types/admin'
+useHead({ title: 'Cleo · Subastas y hallazgos' })
+const route = useRoute(), router = useRouter()
+const mode = computed<CommerceMode>(() => route.query.modalidad === 'sale' ? 'sale' : 'auction')
+const category = computed({ get: () => typeof route.query.categoria === 'string' ? route.query.categoria : '', set: value => { router.replace({ query: { ...route.query, categoria: value || undefined, pagina: undefined } }) } })
+const page = computed(() => Math.max(1, Number.parseInt(String(route.query.pagina || '1'), 10) || 1))
+const query = computed(() => ({ mode: mode.value, typeId: category.value || undefined, page: page.value }))
+const { data, status, error, refresh } = await useFetch<StoreCatalog>('/api/public/catalog', { query })
+function changeMode(value: CommerceMode) { router.replace({ query: { modalidad: value } }) }
+function changePage(next: number) { router.replace({ query: { ...route.query, pagina: next } }) }
+let poll: ReturnType<typeof setInterval> | undefined
+onMounted(() => { poll = setInterval(() => { if (document.visibilityState === 'visible') refresh() }, 15000) })
+onBeforeUnmount(() => { if (poll) clearInterval(poll) })
+</script>
+<template><div class="store-container"><div v-if="error" class="load-error neu-surface" role="alert"><p>No pudimos cargar los artículos.</p><button class="neu-button" @click="refresh()">Reintentar</button></div><template v-else><FeaturedArticles v-if="data?.featured.length" :articles="data.featured" /><div v-else class="store-intro"><span class="featured-eyebrow"><AppIcon name="sparkle" />ENCUENTRA ALGO ESPECIAL</span><h1>Tu próximo <em>hallazgo.</em></h1></div><section class="catalog-section" aria-labelledby="catalog-title"><div class="catalog-heading"><div><span class="category-label">EXPLORA CLEO</span><h2 id="catalog-title">{{ mode === 'auction' ? 'Artículos en subasta' : 'Artículos en venta' }}</h2></div><span class="result-count">{{ data?.total ?? 0 }} artículos</span></div><div class="store-filters"><div class="mode-switch" role="group" aria-label="Modalidad"><button :aria-pressed="mode === 'auction'" :class="{ selected: mode === 'auction' }" @click="changeMode('auction')"><AppIcon name="gavel" />Subastas</button><button :aria-pressed="mode === 'sale'" :class="{ selected: mode === 'sale' }" @click="changeMode('sale')"><AppIcon name="bag" />Ventas</button></div><label class="sr-only" for="store-category">Categoría</label><select id="store-category" v-model="category"><option value="">Todas las categorías</option><option v-for="type in data?.types || []" :key="type.id" :value="type.id">{{ type.name }}</option></select></div><div v-if="data?.items.length" class="store-grid" :aria-busy="status === 'pending'"><StoreCard v-for="article in data.items" :key="article.id" :article="article" /></div><div v-else class="empty-state neu-surface"><span class="empty-icon"><AppIcon name="box" /></span><p>{{ category ? 'No hay artículos en esta categoría.' : 'Pronto habrá nuevos artículos.' }}</p></div><nav v-if="data && (data.total > data.pageSize || page > 1)" class="store-pagination pagination" aria-label="Páginas"><button class="neu-button" :disabled="page === 1" @click="changePage(page - 1)">Anterior</button><span>{{ page }}</span><button class="neu-button" :disabled="page * data.pageSize >= data.total" @click="changePage(page + 1)">Siguiente</button></nav></section></template></div></template>

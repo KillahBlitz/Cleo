@@ -1,0 +1,44 @@
+.delivery-heading { gap: 20px; }
+.delivery-heading h1 { font-size: clamp(24px, 3vw, 32px); font-weight: 500; letter-spacing: -.7px; }
+.delivery-heading p { margin-top: 10px; color: var(--muted); font-size: 12px; }
+.delivery-back { margin-bottom: 22px; }
+.delivery-layout { display: grid; grid-template-columns: minmax(300px, 1fr) minmax(320px, 1.1fr); gap: 30px; align-items: start; }
+.delivery-month, .delivery-agenda { padding: 28px; }
+.delivery-month-heading, .delivery-day-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 28px; }
+.delivery-month-heading h2 { font-size: 20px; font-weight: 500; text-transform: capitalize; }
+.delivery-month-heading .heading-actions { gap: 10px; flex-wrap: nowrap; }
+.delivery-weekdays, .delivery-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+.delivery-weekdays { margin-bottom: 12px; text-align: center; font-size: 10px; color: var(--muted); }
+.delivery-day { min-width: 0; min-height: 58px; border: 1px solid transparent; border-radius: 13px; background: var(--surface); color: var(--text); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 5px 2px; font-size: 14px; }
+.delivery-day:hover { box-shadow: var(--raised-small); }
+.delivery-day.selected { box-shadow: var(--inset); border-color: var(--gold); color: var(--gold); font-weight: 600; }
+.delivery-day.today > span:first-child { text-decoration: underline; text-underline-offset: 4px; }
+.delivery-day.outside { opacity: .35; }.delivery-day.past:not(.selected) { color: var(--muted); }
+.delivery-day-count { font-size: 9px; color: var(--gold); display: inline-flex; align-items: center; gap: 4px; height: 12px; }
+.delivery-dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
+.delivery-month-footer { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--line); margin-top: 20px; padding-top: 12px; }
+.delivery-month-footer > span { display: inline-flex; align-items: center; gap: 7px; font-size: 10px; color: var(--muted); }
+.delivery-public-note { margin-top: 14px; font-size: 12px; line-height: 1.7; color: var(--muted); }
+.delivery-day-heading { margin-bottom: 22px; align-items: flex-start; }
+.delivery-day-heading h2 { font-size: 17px; font-weight: 500; text-transform: capitalize; }
+.delivery-day-heading p { color: var(--muted); font-size: 11px; margin-top: 8px; }
+.delivery-day-heading > .icon { color: var(--gold); width: 24px; height: 24px; }
+.delivery-slots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.delivery-slot { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-radius: 13px; padding: 16px; background: var(--surface); box-shadow: var(--raised-small); border: 1px solid transparent; min-width: 0; }
+.delivery-slot-info { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.delivery-time { font-size: 14px; font-weight: 500; white-space: nowrap; font-variant-numeric: tabular-nums; }.delivery-time > span { font-weight: 400; color: var(--muted); font-size: 11px; }
+.delivery-slot-info strong { font-size: 12px; font-weight: 500; overflow-wrap: anywhere; }
+.delivery-slot-state { font-size: 10px; color: var(--success); }
+.delivery-slot > .icon { width: 16px; height: 16px; color: var(--success); }
+.delivery-slot.occupied { box-shadow: var(--inset); border-color: var(--gold-soft); }.delivery-slot.occupied .delivery-slot-state, .delivery-slot.occupied > .icon { color: var(--gold); }
+.delivery-slot.elapsed:not(.occupied) { box-shadow: none; border-color: var(--line); opacity: .65; }.delivery-slot.elapsed:not(.occupied) .delivery-slot-state, .delivery-slot.elapsed > .icon { color: var(--muted); }
+.delivery-slot-detail { display: flex; gap: 5px; align-items: flex-start; color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }.delivery-slot-detail .icon { width: 13px; height: 13px; margin-top: 2px; }
+.delivery-slot .icon-button { flex-shrink: 0; }
+.delivery-dialog { width: min(580px, calc(100vw - 32px)); max-height: calc(100svh - 32px); overflow: auto; overscroll-behavior: contain; }
+.delivery-dialog .card-heading h2 { font-size: 20px; font-weight: 500; }.delivery-dialog .card-heading { margin-bottom: 26px; }
+.delivery-form > fieldset { display: flex; flex-direction: column; gap: 20px; }.delivery-form .form-field { min-width: 0; }.delivery-form .field-hint { margin: 0; }
+.delivery-form .form-actions { margin-top: 4px; }.delivery-form textarea { width: 100%; }
+.delivery-nav-link { color: var(--gold); font-size: 12px; }.delivery-nav-link .icon { width: 18px; height: 18px; }
+@media(max-width: 1180px) { .delivery-layout { gap: 22px; grid-template-columns: minmax(290px, 1fr) minmax(280px, 1fr); }.delivery-month, .delivery-agenda { padding: 22px; }.delivery-slots { grid-template-columns: 1fr; } }
+@media(max-width: 760px) { .delivery-layout { grid-template-columns: 1fr; }.delivery-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); }.delivery-heading { align-items: flex-start; flex-wrap: wrap; }.delivery-heading p { max-width: 250px; line-height: 1.7; }.delivery-day { min-height: 54px; }.delivery-nav-link { padding: 0; width: 44px; height: 44px; }.delivery-nav-link span { display: none; } }
+@media(max-width: 420px) { .delivery-month, .delivery-agenda { padding: 18px; }.delivery-slots { grid-template-columns: 1fr; }.delivery-days, .delivery-weekdays { gap: 4px; }.delivery-month-heading h2 { font-size: 17px; }.delivery-form .form-grid { grid-template-columns: 1fr; } }

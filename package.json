@@ -1,0 +1,28 @@
+{
+  "name": "cleo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "typecheck": "nuxt typecheck",
+    "db:seed-admin": "node --env-file=.env scripts/seed-admin.mjs",
+    "db:seed-types": "node --env-file=.env scripts/seed-types.mjs",
+    "test:catalog": "node --env-file=.env scripts/check-catalog.mjs"
+  },
+  "dependencies": {
+    "mongodb": "^6.20.0",
+    "nuxt": "^4.0.0",
+    "particles.js": "2.0.0",
+    "sharp": "^0.35.5",
+    "vue": "^3.5.0",
+    "vue-router": "^5.5.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0",
+    "vue-tsc": "^3.0.0"
+  }
+}
