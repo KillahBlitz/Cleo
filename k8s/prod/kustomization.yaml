@@ -5,6 +5,7 @@ resources:
   - deployment.yaml
   - service.yaml
   - network-policy.yaml
+  - cloudflared.yaml
 configMapGenerator:
   - name: cleo-config
     literals:

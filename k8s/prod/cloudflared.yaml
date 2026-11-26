@@ -1,4 +1,4 @@
-# Administrator applies this once per namespace, after creating cleo-tunnel.
+# Actions manages this deployment; create the cleo-tunnel Secret once beforehand.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

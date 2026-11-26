@@ -53,7 +53,6 @@ jobs:
           kubectl kustomize k8s/devel > /dev/null
           kubectl kustomize k8s/prod > /dev/null
           bash -n scripts/deploy-k8s.sh
-          python3 -m py_compile scripts/bootstrap-k8s.py
 
   image:
     name: Publicar imagen
@@ -91,6 +90,15 @@ jobs:
           labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Comprobar descarga pública de la imagen
+        env:
+          IMAGE: ${{ steps.name.outputs.image }}@${{ steps.build.outputs.digest }}
+        run: |
+          docker logout ghcr.io > /dev/null
+          if ! docker pull "$IMAGE"; then
+            echo '::error::No se pudo descargar la imagen sin credenciales. En GitHub Packages cambia la visibilidad del paquete Cleo a Public y reejecuta el job. Si ya es público, revisa la conexión a GHCR.'
+            exit 1
+          fi
       - name: Comprobar contenedor sin privilegios
         env:
           IMAGE: ${{ steps.name.outputs.image }}@${{ steps.build.outputs.digest }}
@@ -105,6 +113,7 @@ jobs:
   deploy:
     name: Desplegar en K3s
     needs: image
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/main')
     runs-on: [self-hosted, linux, x64, kinasis-deploy]
     timeout-minutes: 20
     # Serialize push and manual deployments to the same environment.
@@ -127,8 +136,5 @@ jobs:
           DEPLOY_NAMESPACE: ${{ github.ref == 'refs/heads/main' && 'cleo' || 'cleo-dev' }}
           IMAGE: ${{ needs.image.outputs.image }}
           RELEASE_ID: ${{ github.run_id }}-${{ github.run_attempt }}
-          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
           NUXT_SESSION_PASSWORD: ${{ secrets.NUXT_SESSION_PASSWORD }}
-          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
-          GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}

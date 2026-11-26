@@ -3,17 +3,24 @@ set -euo pipefail
 set +x
 
 case "${DEPLOY_NAMESPACE:-}" in
-  cleo-dev) manifest_dir=devel; expected_cluster=kinasis-preproduction; public_url=https://cleo-dev.kinasisdev.com ;;
-  cleo) manifest_dir=prod; expected_cluster=kinasis-production; public_url=https://cleo.kinasisdev.com ;;
+  cleo-dev) manifest_dir=devel; cluster_environment=preproduction; expected_ip=192.168.50.123; public_url=https://cleo-dev.kinasisdev.com ;;
+  cleo) manifest_dir=prod; cluster_environment=production; expected_ip=192.168.50.128; public_url=https://cleo.kinasisdev.com ;;
   *) echo 'DEPLOY_NAMESPACE debe ser cleo-dev o cleo.' >&2; exit 1 ;;
 esac
-export EXPECTED_CLUSTER="$expected_cluster"
+
+# Reuse the infrastructure access already installed for the runner's Linux user.
+export KUBECONFIG="$HOME/.kube/kinasis/$cluster_environment.yaml"
+if [[ ! -r "$KUBECONFIG" ]]; then
+  echo "El usuario del runner no puede leer $KUBECONFIG. Revisa el acceso existente de kinasis-eye; no necesitas un secret KUBE_CONFIG en GitHub." >&2
+  exit 1
+fi
+kube=(kubectl --kubeconfig "$KUBECONFIG" --context "kinasis-$cluster_environment")
 
 python3 - <<'PY'
 import os, re
-for name in ['KUBE_CONFIG', 'MONGODB_URI', 'NUXT_SESSION_PASSWORD', 'GHCR_USERNAME', 'GHCR_READ_TOKEN', 'IMAGE', 'RELEASE_ID']:
+for name in ['MONGODB_URI', 'NUXT_SESSION_PASSWORD', 'IMAGE', 'RELEASE_ID']:
     if not os.environ.get(name):
-        raise SystemExit(f'Falta configurar {name} en el Environment de GitHub.')
+        raise SystemExit(f'Falta {name} en el despliegue.')
 if len(os.environ['NUXT_SESSION_PASSWORD']) < 32:
     raise SystemExit('NUXT_SESSION_PASSWORD requiere al menos 32 caracteres.')
 if not re.fullmatch(r'ghcr\.io/[a-z0-9._/-]+@sha256:[a-f0-9]{64}', os.environ['IMAGE']):
@@ -24,37 +31,34 @@ if not os.environ['MONGODB_URI'].startswith(('mongodb://', 'mongodb+srv://')):
     raise SystemExit('MONGODB_URI no tiene formato MongoDB.')
 PY
 
+# Select the context explicitly; never change the user's current context.
+actual_server=$("${kube[@]}" config view --minify -o 'jsonpath={.clusters[0].cluster.server}')
+if [[ "$actual_server" != "https://$expected_ip:6443" ]]; then
+  echo 'El acceso local no corresponde al clúster esperado para este entorno.' >&2
+  exit 1
+fi
+if ! "${kube[@]}" --request-timeout=20s -n "$DEPLOY_NAMESPACE" get secret cleo-tunnel -o name >/dev/null 2>&1; then
+  echo "No se pudo leer el Secret cleo-tunnel en $DEPLOY_NAMESPACE. Configura el token de Cloudflare una vez según docs/DEPLOYMENT.md y comprueba el acceso al clúster." >&2
+  exit 1
+fi
+
 umask 077
-deploy_tmp=$(mktemp -d)
+deploy_tmp=$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/cleo-deploy.XXXXXX")
 export DEPLOY_TMP="$deploy_tmp"
 trap 'rm -rf "$deploy_tmp"' EXIT
-export KUBECONFIG="$deploy_tmp/kubeconfig"
 python3 - <<'PY'
 import base64, json, os, pathlib
 root = pathlib.Path(os.environ['DEPLOY_TMP'])
-(root / 'kubeconfig').write_text(os.environ['KUBE_CONFIG'])
 namespace = os.environ['DEPLOY_NAMESPACE']
-auth = base64.b64encode((os.environ['GHCR_USERNAME'] + ':' + os.environ['GHCR_READ_TOKEN']).encode()).decode()
-registry = json.dumps({'auths': {'ghcr.io': {'auth': auth}}})
-def secret(name, data, kind='Opaque'):
-    return {'apiVersion': 'v1', 'kind': 'Secret', 'metadata': {'name': name, 'namespace': namespace},
-            'type': kind, 'data': {k: base64.b64encode(v.encode()).decode() for k, v in data.items()}}
-secrets = [secret('cleo-runtime', {k: os.environ[k] for k in ['MONGODB_URI', 'NUXT_SESSION_PASSWORD']}),
-           secret('ghcr-pull', {'.dockerconfigjson': registry}, 'kubernetes.io/dockerconfigjson')]
-(root / 'secrets.json').write_text(json.dumps({'apiVersion': 'v1', 'kind': 'List', 'items': secrets}))
+secret = {'apiVersion': 'v1', 'kind': 'Secret', 'metadata': {'name': 'cleo-runtime', 'namespace': namespace},
+          'type': 'Opaque', 'data': {k: base64.b64encode(os.environ[k].encode()).decode()
+                                   for k in ['MONGODB_URI', 'NUXT_SESSION_PASSWORD']}}
+(root / 'secrets.json').write_text(json.dumps(secret))
 PY
 
-# A kubeconfig for the other environment must never be accepted accidentally.
-actual_namespace=$(kubectl config view --minify -o 'jsonpath={.contexts[0].context.namespace}')
-actual_cluster=$(kubectl config view --minify -o 'jsonpath={.contexts[0].context.cluster}')
-if [[ "$actual_namespace" != "$DEPLOY_NAMESPACE" || "$actual_cluster" != "$EXPECTED_CLUSTER" ]]; then
-  echo 'El kubeconfig no corresponde al namespace/clúster esperado. Usa bootstrap-k8s.py.' >&2
-  exit 1
-fi
-kubectl --request-timeout=20s -n "$DEPLOY_NAMESPACE" get deployment cleo-tunnel -o name
-
-if ! kubectl --request-timeout=30s apply --server-side --field-manager=cleo-actions -f "$deploy_tmp/secrets.json" >"$deploy_tmp/secret-output" 2>&1; then
-  echo 'No se pudieron actualizar los Secrets. Revisa conectividad y el Role cleo-deployer; no se muestran credenciales.' >&2
+"${kube[@]}" --request-timeout=30s apply -f "k8s/$manifest_dir/namespace.yaml"
+if ! "${kube[@]}" --request-timeout=30s -n "$DEPLOY_NAMESPACE" apply --server-side --field-manager=cleo-actions -f "$deploy_tmp/secrets.json" >"$deploy_tmp/secret-output" 2>&1; then
+  echo 'No se pudo actualizar cleo-runtime. Revisa conectividad y permisos del acceso local de kinasis-eye; no se muestran credenciales.' >&2
   exit 1
 fi
 
@@ -70,14 +74,14 @@ with path.open('a') as f:
     patch = [{'op': 'add', 'path': '/spec/template/metadata/annotations', 'value': {'kinasis.dev/release': os.environ['RELEASE_ID']}}]
     f.write('patches:\n  - target:\n      kind: Deployment\n      name: cleo\n    patch: |\n      ' + json.dumps(patch) + '\n')
 PY
-kubectl kustomize "$deploy_tmp/manifests" > "$deploy_tmp/release.yaml"
-kubectl --request-timeout=30s -n "$DEPLOY_NAMESPACE" apply -f "$deploy_tmp/release.yaml"
-if ! kubectl -n "$DEPLOY_NAMESPACE" rollout status deployment/cleo --timeout=600s; then
-  kubectl -n "$DEPLOY_NAMESPACE" get pods -l app.kubernetes.io/name=cleo
+"${kube[@]}" kustomize "$deploy_tmp/manifests" > "$deploy_tmp/release.yaml"
+"${kube[@]}" --request-timeout=30s -n "$DEPLOY_NAMESPACE" apply -f "$deploy_tmp/release.yaml"
+if ! "${kube[@]}" -n "$DEPLOY_NAMESPACE" rollout status deployment/cleo --timeout=600s; then
+  "${kube[@]}" -n "$DEPLOY_NAMESPACE" get pods -l app.kubernetes.io/name=cleo
   echo 'El rollout falló; revisa eventos, MongoDB e imagen. No se revierte la base ni los secretos automáticamente.' >&2
   exit 1
 fi
-kubectl -n "$DEPLOY_NAMESPACE" rollout status deployment/cleo-tunnel --timeout=120s
+"${kube[@]}" -n "$DEPLOY_NAMESPACE" rollout status deployment/cleo-tunnel --timeout=120s
 # Check the actual public route and TLS, not just the pod or a Cloudflare login page.
 curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 5 \
   --connect-timeout 10 --max-time 20 "$public_url/api/health/ready" > "$deploy_tmp/health.json"

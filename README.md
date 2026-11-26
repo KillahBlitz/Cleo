@@ -6,7 +6,9 @@ Sistema de subastas con Nuxt 4, Vue 3 y MongoDB. Acceso privado de administrador
 
 La [guía de despliegue](docs/DEPLOYMENT.md) explica la preparación y el uso de GitHub Actions: `devel` → namespace `cleo-dev` → `cleo-dev.kinasisdev.com`; `main` → namespace `cleo` → `cleo.kinasisdev.com`. Incluye los dos clústeres existentes, Cloudflare Tunnel, secretos por entorno, MongoDB, el runner en kinasis-eye y rollback. Docker publica únicamente el servidor compilado; `.env` queda fuera de la imagen.
 
-Los manifiestos están separados en dos carpetas independientes: `k8s/devel` para preproducción y `k8s/prod` para producción. Cada carpeta contiene la aplicación, su configuración, namespace, permisos y túnel.
+Los manifiestos están separados en dos carpetas independientes: `k8s/devel` para preproducción y `k8s/prod` para producción. Cada carpeta contiene la aplicación, su configuración, namespace y túnel.
+
+En `kinasis-eye`, se usa únicamente el usuario `kinasis-eye` y la carpeta `~/apps/cleo-setup/actions-runner`. Actions descarga el repositorio en `_work/` y reutiliza los accesos existentes de `~/.kube/kinasis`; no requiere una carpeta `setup`. Solo se configuran `MONGODB_URI` y `NUXT_SESSION_PASSWORD` en cada Environment de GitHub. La imagen de GHCR debe ser pública para descargarla sin tokens manuales. El hash del administrador permanece en MongoDB. `~/kinasis-infra` conserva la infraestructura compartida.
 
 ## Calendario de entregas
 
