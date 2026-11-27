@@ -25,7 +25,7 @@ async function purchase() {
 </script>
 <template>
   <div class="purchase-form">
-    <div v-if="success" class="purchase-confirmation neu-surface" role="status"><AppIcon name="check" /><p>El vendedor se pondrá en contacto contigo para confirmar la compra mediante Facebook.</p><NuxtLink class="text-link" to="/mi-actividad?vista=compras">Ver mis compras<AppIcon name="chevron-right" /></NuxtLink><button v-if="article.canBuy" class="neu-button" @click="success = false">Comprar más</button></div>
+    <div v-if="success" class="purchase-confirmation neu-surface" role="status"><AppIcon name="check" /><p>El vendedor se pondrá en contacto contigo para confirmar la compra mediante el Facebook o teléfono que registraste.</p><NuxtLink class="text-link" to="/mi-actividad?vista=compras">Ver mis compras<AppIcon name="chevron-right" /></NuxtLink><button v-if="article.canBuy" class="neu-button" @click="success = false">Comprar más</button></div>
     <p v-else-if="!article.canBuy && !request" class="profile-status">Sin unidades disponibles.</p>
     <button v-else-if="!profile?.profile" class="submit" @click="profileOpen = true"><AppIcon name="user" />Completar perfil para comprar</button>
     <form v-else @submit.prevent="purchase">

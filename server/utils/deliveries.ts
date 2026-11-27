@@ -5,7 +5,7 @@ import { DELIVERY_TIME_ZONE, DELIVERY_TIMES, deliveryDate, deliveryStart, validD
 interface AppointmentDocument {
   _id: ObjectId; date: string; time: string; startsAt: Date; endsAt: Date; timeZone: string
   recipientName: string; location: string; notes: string; articleId: ObjectId | null
-  articleTitle: string; facebookUrl: string; bidderId: ObjectId | null
+  articleTitle: string; facebookUrl: string; phone?: string; bidderId: ObjectId | null
   active: boolean; revision: number; createdAt: Date; updatedAt: Date; createdBy: ObjectId
   deletedAt?: Date; deletedBy?: ObjectId
 }
@@ -16,7 +16,7 @@ export async function deliveryCollection() {
   return collection
 }
 export function deliveryDTO(record: AppointmentDocument): DeliveryAppointment {
-  return { id: String(record._id), date: record.date, time: record.time, startsAt: record.startsAt.toISOString(), endsAt: record.endsAt.toISOString(), recipientName: record.recipientName, location: record.location, notes: record.notes, articleId: record.articleId ? String(record.articleId) : null, articleTitle: record.articleTitle, facebookUrl: record.facebookUrl, revision: record.revision }
+  return { id: String(record._id), date: record.date, time: record.time, startsAt: record.startsAt.toISOString(), endsAt: record.endsAt.toISOString(), recipientName: record.recipientName, location: record.location, notes: record.notes, articleId: record.articleId ? String(record.articleId) : null, articleTitle: record.articleTitle, facebookUrl: record.facebookUrl || '', phone: record.phone || '', revision: record.revision }
 }
 export function deliveryMonth(event: H3Event) {
   const month = getQuery(event).month
@@ -33,7 +33,7 @@ export async function deliveryArticle(id: ObjectId) {
   const article = await (await getDatabase()).collection('articles').findOne({ _id: id, deletedAt: { $exists: false }, mode: 'auction', $or: [{ closesAt: { $lte: new Date() } }, { status: 'sold' }] }, { projection: { title: 1, bids: 1, declinedBidderIds: 1 } })
   const bidder = article && rankedBidders(article.bids || [], article.declinedBidderIds || []).find(bid => !bid.declined)
   if (!article || !bidder) throw createError({ statusCode: 400, statusMessage: 'Selecciona una subasta cerrada con un postor disponible.' })
-  return { articleId: id, articleTitle: String(article.title), recipientName: bidder.name, facebookUrl: bidder.facebookUrl, bidderId: new ObjectId(bidder.userId) }
+  return { articleId: id, articleTitle: String(article.title), recipientName: bidder.name, facebookUrl: bidder.facebookUrl, phone: bidder.phone, bidderId: new ObjectId(bidder.userId) }
 }
 export async function deliveryInput(event: H3Event, existing?: AppointmentDocument) {
   const body = await limitedJson(event)
@@ -49,11 +49,11 @@ export async function deliveryInput(event: H3Event, existing?: AppointmentDocume
     return value.trim()
   }
   if (existing && (!Number.isSafeInteger(body.revision) || body.revision !== existing.revision)) throw createError({ statusCode: 409, statusMessage: 'La cita cambio. Actualiza el calendario.' })
-  let linked = { articleId: null as ObjectId | null, articleTitle: '', recipientName: field('recipientName', 2, 60), facebookUrl: '', bidderId: null as ObjectId | null }
+  let linked = { articleId: null as ObjectId | null, articleTitle: '', recipientName: field('recipientName', 2, 60), facebookUrl: '', phone: '', bidderId: null as ObjectId | null }
   if (body.articleId) {
     const id = articleId(typeof body.articleId === 'string' ? body.articleId : undefined)
     // Preserve the agreed person's snapshot when rescheduling an existing delivery.
-    linked = existing?.articleId?.equals(id) ? { articleId: id, articleTitle: existing.articleTitle, recipientName: linked.recipientName, facebookUrl: existing.facebookUrl, bidderId: existing.bidderId } : await deliveryArticle(id)
+    linked = existing?.articleId?.equals(id) ? { articleId: id, articleTitle: existing.articleTitle, recipientName: linked.recipientName, facebookUrl: existing.facebookUrl || '', phone: existing.phone || '', bidderId: existing.bidderId } : await deliveryArticle(id)
   }
   return { ...linked, date: body.date, time: body.time, startsAt, endsAt: new Date(startsAt.getTime() + 30 * 60_000), timeZone: DELIVERY_TIME_ZONE, location: field('location', 2, 300), notes: field('notes', 0, 1000) }
 }

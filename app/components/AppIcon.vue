@@ -1,5 +1,5 @@
 <script setup lang="ts">
-export type IconName = 'sun' | 'moon' | 'lock' | 'spinner' | 'sparkle' | 'grid' | 'hanger' | 'gavel' | 'clock' | 'check' | 'logout' | 'search' | 'refresh' | 'chevron-left' | 'chevron-right' | 'user' | 'external' | 'box' | 'bag' | 'plus' | 'close' | 'image' | 'star' | 'facebook' | 'edit' | 'trash' | 'calendar' | 'pin' | 'heart' | 'activity' | 'map' | 'minus' | 'download'
+export type IconName = 'sun' | 'moon' | 'lock' | 'spinner' | 'sparkle' | 'grid' | 'hanger' | 'gavel' | 'clock' | 'check' | 'logout' | 'search' | 'refresh' | 'chevron-left' | 'chevron-right' | 'user' | 'external' | 'box' | 'bag' | 'plus' | 'close' | 'image' | 'star' | 'facebook' | 'edit' | 'trash' | 'calendar' | 'pin' | 'heart' | 'activity' | 'map' | 'minus' | 'download' | 'phone'
 defineProps<{ name: IconName }>()
 </script>
 <template>
@@ -14,6 +14,7 @@ defineProps<{ name: IconName }>()
     <path v-else-if="name === 'edit'" d="m14 4 6 6M4 20l5-1L21 7l-4-4L5 15Zm0 0 1-5" />
     <path v-else-if="name === 'trash'" d="M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7m4-7v7" />
     <path v-else-if="name === 'star'" d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9Z" />
+    <path v-else-if="name === 'phone'" d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.8 2.1Z" />
     <path v-else-if="name === 'facebook'" d="M14 21v-8h3l.5-4H14V7c0-1 .5-2 2-2h2V2h-3c-3 0-5 2-5 5v2H7v4h3v8" />
     <path v-else-if="name === 'plus'" d="M12 5v14M5 12h14" />
     <path v-else-if="name === 'close'" d="m6 6 12 12M6 18 18 6" />

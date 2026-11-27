@@ -10,6 +10,7 @@ export interface DeliveryAppointment {
   articleId: string | null
   articleTitle: string
   facebookUrl: string
+  phone: string
   revision: number
 }
 export interface DeliveryCalendarData {
@@ -24,5 +25,6 @@ export interface DeliveryArticleOption {
   title: string
   recipientName: string
   facebookUrl: string
+  phone: string
   appointmentId: string | null
 }

@@ -3,6 +3,6 @@ export interface PurchaseItem {
   id: string; articleId: string; title: string; category: string; saleType: 'item' | 'package'
   quantity: number; unitPriceCents: number; originalPriceCents: number; totalCents: number
   status: PurchaseStatus; createdAt: string; updatedAt: string; viewable: boolean
-  buyer?: { name: string; facebookUrl: string }
+  buyer?: { name: string; facebookUrl: string; phone: string }
 }
 export interface PurchaseList { items: PurchaseItem[]; total: number; page: number; pageSize: number; pending: number }

@@ -10,7 +10,8 @@
     "typecheck": "nuxt typecheck",
     "db:seed-admin": "node --env-file=.env scripts/seed-admin.mjs",
     "db:seed-types": "node --env-file=.env scripts/seed-types.mjs",
-    "test:catalog": "node --env-file=.env scripts/check-catalog.mjs"
+    "test:catalog": "node --env-file=.env scripts/check-catalog.mjs",
+    "test:profiles": "node --env-file=.env scripts/check-profiles.mjs"
   },
   "dependencies": {
     "mongodb": "^6.20.0",

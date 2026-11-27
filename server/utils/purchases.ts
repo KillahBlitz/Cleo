@@ -5,7 +5,7 @@ import type { PurchaseItem, PurchaseStatus } from '../../shared/types/purchases'
 export interface PurchaseDocument {
   id: ObjectId; requestId: string; title: string; category: string; saleType: 'item' | 'package'
   quantity: number; unitPriceCents: number; originalPriceCents: number; totalCents: number
-  buyer: { userId: ObjectId; name: string; facebookUrl: string }
+  buyer: { userId: ObjectId; name: string; facebookUrl?: string; phone?: string }
   status: PurchaseStatus; createdAt: Date; updatedAt: Date; updatedBy?: ObjectId
 }
 export function salePrice(article: Pick<ArticleDocument, 'saleType' | 'discountPriceCents' | 'initialPriceCents'>) {
@@ -17,7 +17,7 @@ export function purchaseData(purchase: PurchaseDocument, article: Document, admi
     quantity: purchase.quantity, unitPriceCents: purchase.unitPriceCents, originalPriceCents: purchase.originalPriceCents, totalCents: purchase.totalCents,
     status: purchase.status, createdAt: purchase.createdAt.toISOString(), updatedAt: purchase.updatedAt.toISOString(),
     viewable: article.active === true && article.status !== 'sold',
-    ...(admin ? { buyer: { name: purchase.buyer.name, facebookUrl: purchase.buyer.facebookUrl } } : {}),
+    ...(admin ? { buyer: { name: purchase.buyer.name, facebookUrl: purchase.buyer.facebookUrl || '', phone: purchase.buyer.phone || '' } } : {}),
   }
 }
 export async function listPurchases(event: H3Event, userId?: ObjectId) {

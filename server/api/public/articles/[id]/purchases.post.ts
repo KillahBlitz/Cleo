@@ -25,7 +25,7 @@ export default defineEventHandler(async event => {
     const purchase: PurchaseDocument = {
       id: new ObjectId(), requestId: body.requestId, title: article.title, category: types.find(t => t.id === String(article.typeId))?.name || '', saleType: article.saleType || 'item',
       quantity: body.quantity, unitPriceCents, originalPriceCents: article.initialPriceCents, totalCents,
-      buyer: { userId: user._id, name: user.name, facebookUrl: user.facebookUrl }, status: 'pending', createdAt: now, updatedAt: now,
+      buyer: { userId: user._id, name: user.name, ...(user.facebookUrl ? { facebookUrl: user.facebookUrl } : {}), ...(user.phone ? { phone: user.phone } : {}) }, status: 'pending', createdAt: now, updatedAt: now,
     }
     // The reservation and order are one atomic document write, including on standalone MongoDB.
     const result = await articles.updateOne({ _id: id, ...articleRevision(article), active: true, status: 'available', units: { $gte: body.quantity } }, {
