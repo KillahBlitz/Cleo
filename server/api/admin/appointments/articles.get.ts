@@ -5,6 +5,6 @@ export default defineEventHandler(async event => {
   const appointments = await (await deliveryCollection()).find({ active: true, articleId: { $in: articles.map(article => article._id) } }, { projection: { articleId: 1 } }).toArray()
   return { articles: articles.flatMap(article => {
     const bidder = rankedBidders(article.bids || [], article.declinedBidderIds || []).find(bid => !bid.declined)
-    return bidder ? [{ id: String(article._id), title: String(article.title), recipientName: bidder.name, facebookUrl: bidder.facebookUrl, appointmentId: appointments.find(appointment => appointment.articleId?.equals(article._id))?._id.toString() || null }] : []
+    return bidder ? [{ id: String(article._id), title: String(article.title), recipientName: bidder.name, facebookUrl: bidder.facebookUrl, phone: bidder.phone, appointmentId: appointments.find(appointment => appointment.articleId?.equals(article._id))?._id.toString() || null }] : []
   }) }
 })

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { BidderProfile } from '~~/shared/types/store'
 import type { FavoriteList } from '~~/shared/types/activity'
+// The SSR payload contains this browser's private profile and favorites.
+if (import.meta.server) useResponseHeader('Cache-Control').value = 'private, no-store'
 const route = useRoute()
 const store = computed(() => route.path !== '/login')
 const [{ data: profile }, { refresh: refreshFavorites }] = await Promise.all([

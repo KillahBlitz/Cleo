@@ -14,7 +14,7 @@ export default defineEventHandler(async event => {
     if (existing.bids[0].amountCents !== amount) throw createError({ statusCode: 409, statusMessage: 'Ese intento ya registro otra cantidad.' })
     return { ok: true, repeated: true }
   }
-  const bid: BidEntry = { id: new ObjectId(), requestId: body.requestId, amountCents: amount, createdAt: new Date(), bidder: { userId: user._id, name: user.name, facebookUrl: user.facebookUrl } }
+  const bid: BidEntry = { id: new ObjectId(), requestId: body.requestId, amountCents: amount, createdAt: new Date(), bidder: { userId: user._id, name: user.name, ...(user.facebookUrl ? { facebookUrl: user.facebookUrl } : {}), ...(user.phone ? { phone: user.phone } : {}) } }
   const result = await articles.updateOne({
     _id: id, active: true, mode: 'auction', status: { $in: ['available', 'auction'] },
     $expr: { $gt: ['$closesAt', '$$NOW'] },
