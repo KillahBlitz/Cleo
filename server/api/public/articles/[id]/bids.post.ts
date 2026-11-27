@@ -19,7 +19,8 @@ export default defineEventHandler(async event => {
     _id: id, active: true, mode: 'auction', status: { $in: ['available', 'auction'] },
     $expr: { $gt: ['$closesAt', '$$NOW'] },
     'bids.requestId': { $ne: body.requestId }, 'bids.4999': { $exists: false },
-    $or: [{ highestBidAmountCents: null, $expr: { $eq: [{ $multiply: [{ $ceil: { $divide: ['$initialPriceCents', 100] } }, 100] }, amount] } }, { highestBidAmountCents: { $type: 'number', $lt: amount } }],
+    // The starting price is a reference; only an existing bid sets the minimum.
+    $or: [{ highestBidAmountCents: null }, { highestBidAmountCents: { $type: 'number', $lt: amount } }],
   }, {
     $set: { highestBidAmountCents: amount, highestBidder: bid.bidder, updatedAt: bid.createdAt },
     $inc: { bidCount: 1, revision: 1 }, $push: { bids: { $each: [bid], $sort: { amountCents: 1 } } } as any,

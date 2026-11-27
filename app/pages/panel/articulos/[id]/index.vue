@@ -15,7 +15,7 @@ const currency = (cents: number | null) => cents === null ? 'Sin pujas' : money(
     <div class="detail-photos"><img v-for="(photo, index) in data.photos" :key="photo.id" :src="photo.url" :alt="`${data.title}, foto ${index + 1}`" /></div>
     <dl class="detail-grid"><div><dt>Categoría</dt><dd>{{ data.category }}</dd></div><div><dt>Modalidad</dt><dd>{{ data.mode === 'auction' ? 'Subasta' : 'Venta' }}</dd></div><div><dt>{{ data.mode === 'sale' ? 'Precio fijo' : 'Precio inicial' }}</dt><dd>{{ currency(data.initialPriceCents) }}</dd></div><div v-if="data.mode === 'auction'"><dt>Tiempo restante</dt><dd><span v-if="data.status === 'sold'">Venta finalizada</span><ArticleCountdown v-else :closes-at="data.closesAt" show-date /></dd></div><div v-if="data.mode === 'auction'"><dt>Mejor oferta</dt><dd>{{ currency(data.highestBidAmountCents) }}</dd></div><div v-if="data.mode === 'auction'"><dt>Mejor postor</dt><dd>{{ data.highestBidder?.name || 'Sin postor' }}</dd></div><template v-if="data.mode === 'sale'"><div><dt>Tipo</dt><dd>{{ data.saleType === 'package' ? 'Paquete' : 'Artículo' }}</dd></div><div v-if="data.discountPriceCents !== null"><dt>Precio con descuento</dt><dd>{{ money(data.discountPriceCents) }}</dd></div><div><dt>Unidades disponibles</dt><dd>{{ data.units ?? 0 }}</dd></div><div><dt>Unidades reservadas</dt><dd>{{ data.reservedUnits }}</dd></div></template></dl>
     <h3>Descripción</h3><p class="article-description">{{ data.description }}</p>
-    <AdminBidRanking v-if="data.mode === 'auction'" :id="data.id" :sold="data.status === 'sold'" />
+    <AdminBidRanking v-if="data.mode === 'auction'" :id="data.id" :sold="data.status === 'sold'" @changed="refresh()" />
   </article>
   </div>
 </template>
