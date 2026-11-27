@@ -6,5 +6,5 @@ export function rankedBidders(bids: BidEntry[], declined: ObjectId[] = []) {
     const id = String(bid.bidder.userId)
     if (seen.has(id)) return false
     seen.add(id); return true
-  }).map(bid => ({ userId: String(bid.bidder.userId), name: bid.bidder.name, facebookUrl: bid.bidder.facebookUrl, amountCents: bid.amountCents, declined: skipped.has(String(bid.bidder.userId)) }))
+  }).map(bid => ({ bidId: String(bid.id), userId: String(bid.bidder.userId), name: bid.bidder.name, facebookUrl: bid.bidder.facebookUrl, amountCents: bid.amountCents, declined: skipped.has(String(bid.bidder.userId)) }))
 }

@@ -124,3 +124,7 @@
 }
 @media(prefers-reduced-motion: reduce) { .store-card:hover { transform: none; }.featured-visual > img { transform: none; } }
 .profile-card h2 { font: 400 29px 'Playfair Display', serif; margin-bottom: 12px; }
+
+.bid-delete-button { white-space: nowrap; font-size: 11px; }
+.admin-bid-history li { align-items: center; }.admin-bid-history li > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }.admin-bid-history li > strong { white-space: nowrap; }
+@media(max-width: 640px) { .admin-bid-history li { flex-wrap: wrap; gap: 12px; }.admin-bid-history li > span { flex-basis: calc(100% - 140px); }.admin-bid-history .bid-delete-button { margin-left: auto; } }
